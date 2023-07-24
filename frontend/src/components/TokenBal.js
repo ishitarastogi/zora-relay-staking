@@ -1,0 +1,67 @@
+import React, { useEffect, useState } from "react";
+import TokenAbi from "../ABIs/BuidlToken.json";
+import StakingAbi from "../ABIs/Staking.json";
+import { getContract } from "@wagmi/core";
+import { useWalletClient } from "wagmi";
+import { useAccount } from "wagmi";
+import { ethers } from "ethers";
+
+const TokenBal = () => {
+  const { address } = useAccount();
+  const [rewardBal, setRewardBal] = useState();
+  const [tokenId, setTokenId] = useState();
+  const [tokenBal, setTokenBal] = useState("0");
+
+  const { data: walletClient } = useWalletClient();
+
+  const tokenContract = getContract({
+    address: TokenAbi.address,
+    abi: TokenAbi.abi,
+    walletClient,
+  });
+
+  const stakingContract = getContract({
+    address: StakingAbi.address,
+    abi: StakingAbi.abi,
+    walletClient,
+  });
+  useEffect(() => {
+    if (address && stakingContract && tokenContract) {
+      const getReward = async () => {
+        try {
+          const reward = await stakingContract.read.calculateReward([address]);
+          setRewardBal(ethers.utils.formatUnits(reward, 18));
+        } catch (err) {
+          console.log(err);
+        }
+      };
+      const getBalance = async () => {
+        try {
+          const tokenBalance = await tokenContract.read.balanceOf(address);
+
+          setTokenBal(ethers.utils.formatEther(tokenBalance));
+        } catch (err) {
+          console.log(err);
+        }
+      };
+      getReward();
+      getBalance();
+    }
+  }, [address, stakingContract, tokenContract]);
+  return (
+    <div className="flex flex-col text-center justify-center ">
+      <h2 className="mt-5 text-2xl">Your Tokens</h2>
+      <div className="flex mx-auto my-5">
+        <section className="border p-5 rounded-lg m-2">
+          <h2>Rewards</h2>
+          {rewardBal + " BT"}
+        </section>
+        <section className="border p-5 rounded-lg m-2">
+          <h2>Balance</h2>
+          {tokenBal + " BT"}
+        </section>
+      </div>
+    </div>
+  );
+};
+export default TokenBal;
